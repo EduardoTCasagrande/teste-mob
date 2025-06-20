@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reposição de Produtos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+      background-color: #ffe6f0;
+      color: #333;
+    }
+    select, button, input {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    #mensagem {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .ok { color: green; }
+    .erro { color: red; }
+    #resumo ul {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 1rem;
+    }
+    #resumo li {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Reposição de Produtos</h1>
+
+  <label for="quiosqueSelect">Selecione o quiosque:</label>
+  <select id="quiosqueSelect">
+    <option value="">-- Escolha um quiosque --</option>
+  </select>
+
+  <br>
+  <label for="inputSKU">Bipagem Manual:</label>
+  <input type="text" id="inputSKU" placeholder="Escaneie com o bipador" autofocus />
+
+  <div id="mensagem">Selecione um quiosque para começar.</div>
+  <div id="cabecalho"></div>
+  <div id="resumo"></div>
+
+  <!-- Sons -->
+  <audio id="beep-sound" src="/certo.mp3" preload="auto"></audio>
+  <audio id="erro-sound" src="/errado.mp3" preload="auto"></audio>
+
+  <br><br>
+  <label for="separadorInput">Quem separou:</label>
+  <input type="text" id="separadorInput" placeholder="Nome do separador" />
+
+  <button onclick="enviarRelatorio()">📤 Finalizar Reposição</button>
+
+  <script>
+  const beepSound = document.getElementById("beep-sound");
+  const erroSound = document.getElementById("erro-sound");
+  let leituraHabilitada = false;
+  let dadosPlanejados = {};
+  let contagemAtual = {};
+
+  const sheetID = "1P9flPSIzvZNn68RuhBI3WW1333vfJhCbDPh8N_FtYJA";
+  const sheetName = "Página1";
+
+  async function carregarQuiosqueDaSessao() {
+    try {
+      const res = await fetch('/session-user');
+      const user = await res.json();
+
+      if (!user || !user.quiosque) {
+        alert("Sessão expirada. Faça login novamente.");
+        return window.location.href = "/login";
+      }
+
+      const nomeQuiosque = user.quiosque;
+      const select = document.getElementById("quiosqueSelect");
+      select.innerHTML = "";
+      select.disabled = true;
+
+      const option = document.createElement("option");
+      option.value = nomeQuiosque;
+      option.textContent = nomeQuiosque;
+      option.selected = true;
+      select.appendChild(option);
+
+      await carregarReposicao(nomeQuiosque);
+    } catch (err) {
+      console.error("Erro ao obter quiosque da sessão:", err);
+      alert("Erro ao carregar quiosque da sessão.");
+    }
+  }
+
+  function excelDateToJSDate(serial) {
+    const utc_days = Math.floor(serial - 25569);
+    const utc_value = utc_days * 86400;
+    const date_info = new Date(utc_value * 1000);
+    return date_info.toISOString().split('T')[0];
+  }
+
+  async function gerarQueryURL(nomeQuiosque) {
+    try {
+      const response = await fetch(`/quiosque-info/${encodeURIComponent(nomeQuiosque)}`);
+      if (!response.ok) throw new Error('Erro ao buscar dados do quiosque');
+      
+      const { range, colunas } = await response.json();
+      const query = encodeURIComponent(`SELECT ${colunas}`);
+      return `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+
+  async function carregarReposicao(intervalo) {
+    const url = await gerarQueryURL(intervalo);
+    if (!url) throw new Error("Erro ao gerar URL da planilha.");
+    try {
+      const res = await fetch(url);
+      const text = await res.text();
+      const json = JSON.parse(text.substring(47).slice(0, -2));
+      let rows = json.table.rows;
+
+      if (!rows || rows.length === 0) throw new Error("Nenhuma linha encontrada");
+
+      const cabecalho = rows[0];
+      const titulo = cabecalho.c.map((col, idx) => {
+        if (!col || col.v == null) return "";
+        let valor = col.v;
+        if (idx === 1 && typeof valor === 'number' && valor > 40000) {
+          valor = excelDateToJSDate(valor);
+        }
+        return valor;
+      }).join(" / ");
+      document.getElementById("cabecalho").innerText = `Colunas: ${titulo}`;
+      rows = rows.slice(1);
+
+      const dados = {};
+      for (const row of rows) {
+        if (!row.c || row.c.length <= 1) continue;
+        const skuCell = row.c[0];
+        const qtdCell = row.c[1];
+        if (!skuCell || !qtdCell) continue;
+
+        let skuRaw = skuCell.v;
+        if (typeof skuRaw === 'number' && skuRaw > 40000) {
+          skuRaw = excelDateToJSDate(skuRaw);
+        }
+        const sku = (skuRaw || "").toString().trim().toLowerCase();
+
+        let qtdRaw = qtdCell.v;
+        let qtd;
+        if (typeof qtdRaw === 'number' && qtdRaw > 40000) {
+          qtd = excelDateToJSDate(qtdRaw);
+        } else {
+          qtd = parseInt(qtdRaw);
+        }
+
+        if (sku && ((typeof qtd === 'number' && !isNaN(qtd) && qtd > 0) || typeof qtd === 'string')) {
+          dados[sku] = qtd;
+        }
+      }
+
+      dadosPlanejados = dados;
+      contagemAtual = {};
+
+      await fetch('/reposicao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dados })
+      });
+
+      leituraHabilitada = true;
+      document.getElementById("mensagem").innerText = "Reposição carregada. Escaneie um produto.";
+      document.getElementById("mensagem").className = "";
+      atualizarResumo();
+
+      document.getElementById("inputSKU").focus();
+    } catch (err) {
+      console.error(err);
+      document.getElementById("mensagem").innerText = "Erro ao carregar reposição.";
+      document.getElementById("mensagem").className = "erro";
+    }
+  }
+
+  function atualizarResumo() {
+    const resumoDiv = document.getElementById("resumo");
+    let resumoHTML = "<h3>Status da Reposição:</h3><ul>";
+
+    const listaSkus = Object.keys(dadosPlanejados).map(sku => {
+      const planejado = dadosPlanejados[sku];
+      const atual = contagemAtual[sku] || 0;
+      return { sku, planejado, atual };
+    });
+
+    const pendentes = listaSkus.filter(item => {
+      if (typeof item.planejado === 'string') return true;
+      return item.atual < item.planejado;
+    });
+
+    pendentes.sort((a, b) => {
+      const faltaA = (typeof a.planejado === 'number' ? a.planejado - a.atual : 1);
+      const faltaB = (typeof b.planejado === 'number' ? b.planejado - b.atual : 1);
+      return faltaA - faltaB;
+    });
+
+    if (pendentes.length === 0) {
+      resumoHTML += "<li>🎉 Todos os produtos foram bipados com sucesso!</li>";
+    } else {
+      pendentes.forEach((item, index) => {
+        const destaque = index === 0
+          ? 'style="background-color: #e825be; border: 1px solid #ffeeba; border-radius: 6px; padding: 5px;"'
+          : '';
+        resumoHTML += `<li ${destaque}>
+          <strong>${item.sku}</strong>: 
+          ${typeof item.planejado === 'string' 
+            ? `<em>${item.planejado}</em>` 
+            : `${item.atual}/${item.planejado}`
+          }
+        </li>`;
+      });
+    }
+
+    resumoHTML += "</ul>";
+    resumoDiv.innerHTML = resumoHTML;
+  }
+
+  document.getElementById("inputSKU").addEventListener("keypress", async function (e) {
+    if (e.key === "Enter" && leituraHabilitada) {
+      const input = e.target;
+      const sku = input.value.trim().toLowerCase();
+      input.value = "";
+
+      if (dadosPlanejados[sku]) {
+        beepSound.play();
+      } else {
+        erroSound.play();
+      }
+
+      try {
+        const res = await fetch('/bipar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sku })
+        });
+
+        const data = await res.json();
+        const div = document.getElementById("mensagem");
+        div.innerText = data.mensagem;
+        div.className = data.status === 'ok' ? 'ok' : 'erro';
+
+        if (data.atual) {
+          contagemAtual = data.atual;
+        }
+
+        atualizarResumo();
+      } catch (err) {
+        console.error(err);
+        const div = document.getElementById("mensagem");
+        div.innerText = 'Erro ao enviar SKU.';
+        div.className = 'erro';
+      }
+    }
+  });
+
+  async function enviarRelatorio() {
+    if (Object.keys(contagemAtual).length === 0) {
+      alert("Nenhum produto bipado ainda.");
+      return;
+    }
+
+    const separador = document.getElementById("separadorInput").value.trim();
+    if (!separador) {
+      alert("Por favor, informe quem separou a reposição.");
+      return;
+    }
+
+    try {
+      const res = await fetch('/relatorio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dados: contagemAtual,
+          separador: separador
+        })
+      });
+
+      const data = await res.json();
+      alert(data.mensagem || "Relatório enviado com sucesso.");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao enviar relatório.");
+    }
+  }
+
+  window.onload = () => {
+    carregarQuiosqueDaSessao();
+    document.getElementById("inputSKU").focus();
+  };
+</script>
+
+</body>
+</html>

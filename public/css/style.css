@@ -1,0 +1,293 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;          
+  flex-direction: column; 
+  justify-content: center;
+  align-items: center;
+}
+
+/*---- USADO PARA TODAS AS TELAS ----*/
+main {
+  flex: 1;
+  display: flex;               
+  justify-content: center;     
+  align-items: center;         
+}
+
+header {
+  background-color: #2c3e50;
+  color: white;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+header img {
+  height: 100px;
+}
+
+footer {
+  background-color: #2c3e50;
+  color: white;
+  text-align: center;
+  padding: 15px 0 15px 0;
+  width: 100%;
+}
+
+/*---- USADO PARA FORMUALRIOS ----*/
+.formulario {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  width: 300px; /* largura fixa para o formulário */
+  text-align: center;
+  height: auto;
+}
+
+.formulario input {
+  display: block;
+  width: 100%;
+  margin: 15px 0;
+  padding: 10px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.formulario button {
+  padding: 10px;
+  width: 100%;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#quiosqueSelect{
+  margin: 10px 0 20px 0;
+  width: 100%;
+  text-align: center;
+}
+.quiosques {
+  background-color: #ffffff;
+  padding: 30px;
+  margin: 20px auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 600px;  
+  text-align: center;
+}
+
+.quiosques h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.quiosques ul {
+  list-style-type: none;  
+  padding: 0;
+  margin: 0;
+}
+
+.quiosques ul li {
+  background-color: #ecf0f1;
+  margin-bottom: 10px;
+  padding: 12px 20px;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.quiosques ul li:hover {
+  background-color: #d0d7de;
+  cursor: pointer;
+}
+
+#ajustar input{
+  margin: 0;
+}
+
+/*---- USADO NO DASHBOARD ----*/
+.botao-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.botao-container a {
+  text-decoration: none;
+  background-color: #0773df; 
+  color: white;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: background-color 0.3s, transform 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.botao-container a:hover {
+  background-color: #30669c;
+  transform: translateY(-3px);
+}
+
+#caixaInfo {
+  width: 100%;
+  max-width: 570px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  color: #333;
+  font-size: 14px;
+}
+
+/*---- USADO PARA REPOSIÇÃO ----*/
+.reposicao {
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  width: 100%;
+  margin: 30px;
+}
+
+.reposicao h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.reposicao ul{
+  list-style: none;
+}
+
+.reposicao label {
+  display: block;
+  margin: 15px 10px 0 0;
+  font-weight: bold;
+  white-space: nowrap;
+  
+}
+
+.reposicao select,
+.reposicao input[type="text"] {
+  width: 80%;
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.reposicao button {
+  margin-top: 20px;
+  width: 100%;
+  padding: 12px;
+  background-color: #0773df;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.reposicao button:hover {
+  background-color: #30669c ;
+  transform: translateY(-2px);
+}
+
+.ajuste-reposicao .mobile{
+  display: flex;
+  margin-top: 30px;
+}
+
+#mensagem {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: bold;
+}
+
+#mensagem.ok {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+#mensagem.erro {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+#cabecalho,
+#resumo {
+  margin-top: 20px;
+  background-color: #fdfdfd;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+#resumo ul {
+  padding-left: 20px;
+}
+
+#resumo h3{
+  display: none;
+}
+#resumo li {
+  margin-bottom: 8px;
+}
+
+#resumo li:first-child {
+  background-color: #ffe6f7;
+  border-left: 5px solid #e825be;
+  padding-left: 10px;
+  border-radius: 4px;
+}
+
+#inputSKU {
+  border: 2px solid #4CAF50;
+}
+
+.ajuste-layout{
+  display: flex
+}
+
+
+@media (max-width: 600px) {
+  .reposicao {
+    padding: 0 5px 10px 5px;
+    margin: 10px 10px 0 0;
+  }
+
+  .reposicao select,
+  .reposicao input[type="text"] {
+    width: 100%;
+  }
+
+  .ajuste-layout {
+    display: flex;
+    flex-direction: column;
+    margin: 15px 10px 15px 0;
+  }
+
+  .reposicao button {
+    font-size: 14px;
+    padding: 10px;
+  }
+  .ajuste-reposicao{
+    display: none;
+  }
+}

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vendas - Controle de Estoque</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+      background-color: #f4f4f4;
+    }
+    select, input, button {
+      font-size: 1.2rem;
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      border-radius: 8px;
+    }
+    #mensagem {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    .ok { color: green; }
+    .erro { color: red; }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      background: #fff;
+      margin: 4px auto;
+      padding: 8px;
+      border-radius: 6px;
+      max-width: 400px;
+      text-align: left;
+      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+    }
+    #totalVenda {
+      margin-top: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .pagamento {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Registro de Vendas</h1>
+
+  <label for="quiosqueSelect">Quiosque:</label>
+  <select id="quiosqueSelect" disabled>
+    <option value="">Carregando...</option>
+  </select>
+
+  <br>
+
+  <label for="inputSKU">SKU:</label>
+  <input type="text" id="inputSKU" placeholder="Bipe ou digite SKU" autofocus />
+
+  <br>
+
+  <h3>Formas de Pagamento</h3>
+  <div id="pagamentos">
+    <div class="pagamento">
+      <select class="forma">
+        <option value="dinheiro">Dinheiro</option>
+        <option value="pix">Pix</option>
+        <option value="cartao">Cartão</option>
+      </select>
+      <input type="number" class="valor" placeholder="Valor (R$)" min="0" step="0.01" />
+      <button type="button" class="remover">Remover</button>
+    </div>
+  </div>
+  <button type="button" id="adicionarPagamento">Adicionar Forma de Pagamento</button>
+
+  <br>
+
+  <label for="desconto">Desconto (R$):</label>
+  <input type="number" id="desconto" placeholder="Ex: 10.00" step="0.01" min="0" value="0" />
+
+  <br>
+
+  <button id="finalizarVenda">Finalizar Venda</button>
+
+  <div id="mensagem"></div>
+
+  <ul id="listaVendas"></ul>
+
+  <h2 id="totalVenda">Total: R$ 0,00</h2>
+
+  <script>
+    const inputSKU = document.getElementById("inputSKU");
+    const quiosqueSelect = document.getElementById("quiosqueSelect");
+    const mensagem = document.getElementById("mensagem");
+    const listaVendas = document.getElementById("listaVendas");
+    const finalizarVenda = document.getElementById("finalizarVenda");
+    const totalVenda = document.getElementById("totalVenda");
+    const descontoInput = document.getElementById("desconto");
+    const pagamentosDiv = document.getElementById('pagamentos');
+    const adicionarPagamentoBtn = document.getElementById('adicionarPagamento');
+
+    let vendaAtual = {};
+    let precos = {};
+    let total = 0;
+
+    async function carregarQuiosqueUsuario() {
+      try {
+        const res = await fetch('/meu-quiosque');
+        if (!res.ok) throw new Error("Não autenticado");
+        const data = await res.json();
+
+        quiosqueSelect.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = data.quiosque;
+        opt.textContent = data.quiosque;
+        quiosqueSelect.appendChild(opt);
+        quiosqueSelect.disabled = true;
+
+      } catch (err) {
+        quiosqueSelect.innerHTML = '<option value="">Erro ao carregar quiosque</option>';
+        mensagem.textContent = 'Erro: Você precisa estar logado.';
+        mensagem.className = 'erro';
+        inputSKU.disabled = true;
+        finalizarVenda.disabled = true;
+      }
+    }
+
+    async function carregarPrecos() {
+      try {
+        const res = await fetch('/api/precos');
+        if (!res.ok) throw new Error("Erro ao buscar preços");
+        const lista = await res.json();
+
+        precos = {};
+        lista.forEach(({ sku, preco, foto }) => {
+          precos[sku.toLowerCase()] = { preco, foto };
+        });
+
+      } catch (err) {
+        mensagem.textContent = 'Erro ao carregar preços.';
+        mensagem.className = 'erro';
+        inputSKU.disabled = true;
+        finalizarVenda.disabled = true;
+      }
+    }
+
+    function formatarReal(valor) {
+      return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function atualizarListaVendas() {
+      listaVendas.innerHTML = "";
+      let subtotalGeral = 0;
+
+      Object.entries(vendaAtual).forEach(([sku, qtd]) => {
+        const info = precos[sku] || { preco: 0, foto: '' };
+        const precoUnit = info.preco;
+        const subtotal = precoUnit * qtd;
+        subtotalGeral += subtotal;
+
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <img src="${info.foto || '/imagens/skus/sem-foto.jpg'}" alt="${sku}" style="width:60px; height:60px; object-fit:cover; border-radius:4px;"/>
+            <div>
+              <strong>${sku}</strong><br>
+              Quantidade: ${qtd}<br>
+              Total: ${formatarReal(subtotal)}
+            </div>
+          </div>
+        `;
+        listaVendas.appendChild(li);
+      });
+
+      const desconto = parseFloat(descontoInput.value) || 0;
+      total = subtotalGeral - desconto;
+      if (total < 0) total = 0;
+
+      totalVenda.textContent = `Total: ${formatarReal(total)}`;
+      ajustarValorDinheiro();  // Ajusta o pagamento em dinheiro sempre que atualizar lista
+    }
+
+    inputSKU.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        const sku = inputSKU.value.trim().toLowerCase();
+        const quiosque = quiosqueSelect.value;
+        inputSKU.value = "";
+
+        if (!quiosque || !sku) {
+          mensagem.textContent = "Selecione o quiosque e informe o SKU.";
+          mensagem.className = "erro";
+          return;
+        }
+
+        if (!precos[sku]) {
+          mensagem.textContent = `SKU '${sku}' não encontrado na tabela de preços.`;
+          mensagem.className = "erro";
+          return;
+        }
+
+        if (!vendaAtual[sku]) vendaAtual[sku] = 0;
+        vendaAtual[sku]++;
+        mensagem.textContent = `SKU '${sku}' registrado.`;
+        mensagem.className = "ok";
+        atualizarListaVendas();
+      }
+    });
+
+    descontoInput.addEventListener("input", () => {
+      atualizarListaVendas();
+    });
+
+    adicionarPagamentoBtn.addEventListener('click', () => {
+      const div = document.createElement('div');
+      div.className = 'pagamento';
+      div.innerHTML = `
+        <select class="forma">
+          <option value="dinheiro">Dinheiro</option>
+          <option value="pix">Pix</option>
+          <option value="cartao">Cartão</option>
+        </select>
+        <input type="number" class="valor" placeholder="Valor (R$)" min="0" step="0.01" />
+        <button type="button" class="remover">Remover</button>
+      `;
+      div.querySelector('.remover').addEventListener('click', () => div.remove());
+      pagamentosDiv.appendChild(div);
+      div.querySelector('.valor').addEventListener('input', ajustarValorDinheiro);
+      div.querySelector('.forma').addEventListener('change', ajustarValorDinheiro);
+    });
+
+    function coletarPagamentos() {
+      const pagamentos = [];
+      pagamentosDiv.querySelectorAll('.pagamento').forEach(div => {
+        const forma = div.querySelector('.forma').value;
+        const valor = parseFloat(div.querySelector('.valor').value) || 0;
+        if (valor > 0) {
+          pagamentos.push({ forma, valor });
+        }
+      });
+      return pagamentos;
+    }
+
+    function ajustarValorDinheiro() {
+      const pagamentos = pagamentosDiv.querySelectorAll('.pagamento');
+      let somaOutros = 0;
+      let dinheiroInput = null;
+
+      pagamentos.forEach(div => {
+        const forma = div.querySelector('.forma').value;
+        const valorInput = div.querySelector('.valor');
+        const valor = parseFloat(valorInput.value) || 0;
+
+        if (forma === 'dinheiro') {
+          dinheiroInput = valorInput;
+        } else {
+          somaOutros += valor;
+        }
+      });
+
+      if (dinheiroInput) {
+        const valorDinheiro = total - somaOutros;
+        dinheiroInput.value = valorDinheiro > 0 ? valorDinheiro.toFixed(2) : '0.00';
+      }
+    }
+
+    finalizarVenda.addEventListener("click", async () => {
+      const quiosque = quiosqueSelect.value;
+      const desconto = parseFloat(descontoInput.value) || 0;
+      const pagamentos = coletarPagamentos();
+      const somaPagamentos = pagamentos.reduce((acc, p) => acc + p.valor, 0);
+
+      if (!quiosque || Object.keys(vendaAtual).length === 0) {
+        mensagem.textContent = "Selecione o quiosque e bip ao menos 1 item.";
+        mensagem.className = "erro";
+        return;
+      }
+
+      if (pagamentos.length === 0) {
+        mensagem.textContent = "Adicione ao menos uma forma de pagamento com valor.";
+        mensagem.className = "erro";
+        return;
+      }
+
+      if (Math.abs(somaPagamentos - total) > 0.01) {
+        mensagem.textContent = `Total informado nos pagamentos (${formatarReal(somaPagamentos)}) não bate com o total da venda (${formatarReal(total)}).`;
+        mensagem.className = "erro";
+        return;
+      }
+
+      try {
+        const res = await fetch('/vender', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quiosque, venda: vendaAtual, pagamentos, total, desconto })
+        });
+        const data = await res.json();
+        mensagem.textContent = data.mensagem || "Venda finalizada.";
+        mensagem.className = data.status === "ok" ? "ok" : "erro";
+
+        if (data.status === "ok") {
+          vendaAtual = {};
+          listaVendas.innerHTML = "";
+          descontoInput.value = 0;
+          pagamentosDiv.innerHTML = `
+            <div class="pagamento">
+              <select class="forma">
+                <option value="dinheiro">Dinheiro</option>
+                <option value="pix">Pix</option>
+                <option value="cartao">Cartão</option>
+              </select>
+              <input type="number" class="valor" placeholder="Valor (R$)" min="0" step="0.01" />
+              <button type="button" class="remover">Remover</button>
+            </div>
+          `;
+          pagamentosDiv.querySelector('.remover').addEventListener('click', (e) => e.target.closest('.pagamento').remove());
+          pagamentosDiv.querySelector('.valor').addEventListener('input', ajustarValorDinheiro);
+          pagamentosDiv.querySelector('.forma').addEventListener('change', ajustarValorDinheiro);
+          totalVenda.textContent = "Total: R$ 0,00";
+        }
+        if (data.cupomUrl) {
+          window.location.href = data.cupomUrl;
+        }
+      } catch (err) {
+        console.error(err);
+        mensagem.textContent = "Erro ao finalizar venda.";
+        mensagem.className = "erro";
+      }
+    });
+
+    window.onload = async () => {
+      await carregarQuiosqueUsuario();
+      await carregarPrecos();
+
+      pagamentosDiv.querySelectorAll('.remover').forEach(btn => {
+        btn.addEventListener('click', (e) => e.target.closest('.pagamento').remove());
+      });
+
+      pagamentosDiv.querySelectorAll('.valor').forEach(input => {
+        input.addEventListener('input', ajustarValorDinheiro);
+      });
+
+      pagamentosDiv.querySelectorAll('.forma').forEach(select => {
+        select.addEventListener('change', ajustarValorDinheiro);
+      });
+    };
+  </script>
+
+</body>
+</html>

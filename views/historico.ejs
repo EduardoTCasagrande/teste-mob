@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Histórico de Vendas</title>
+  <link rel="stylesheet" href="/css/style.css">
+
+</head>
+<body>
+
+  <%- include('partials/header') %>
+
+  <h1>Histórico de Vendas</h1>
+
+  <form id="filtroForm">
+    <label>Data Início:
+      <input type="date" id="data_inicio" name="data_inicio" required>
+    </label>
+
+    <label>Data Fim:
+      <input type="date" id="data_fim" name="data_fim" required>
+    </label>
+
+    <label>Quiosque:
+      <input type="text" id="quiosque" name="quiosque" placeholder="(opcional)">
+    </label>
+
+    <button type="submit">Buscar</button>
+  </form>
+
+  <table id="resultadoTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Quiosque</th>
+        <th>SKU</th>
+        <th>Quantidade</th>
+        <th>Valor</th>
+        <th>Operador</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <%- include('partials/footer') %>
+  <script>
+    document.getElementById('filtroForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      const data_inicio = document.getElementById('data_inicio').value;
+      const data_fim = document.getElementById('data_fim').value;
+      const quiosque = document.getElementById('quiosque').value;
+
+      fetch(`/historico-vendas?data_inicio=${data_inicio}&data_fim=${data_fim}&quiosque=${encodeURIComponent(quiosque)}`)
+        .then(response => response.json())
+        .then(data => {
+          const table = document.getElementById('resultadoTable');
+          const tbody = table.querySelector('tbody');
+          tbody.innerHTML = '';
+
+          if (data.status === 'ok' && data.historico.length > 0) {
+            data.historico.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${item.data}</td>
+                <td>${item.quiosque}</td>
+                <td>${item.sku}</td>
+                <td>${item.quantidade}</td>
+                <td>${item.valor.toFixed(2)}</td>
+                <td>${item.operador}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+            table.style.display = 'table';
+          } else {
+            table.style.display = 'none';
+            alert('Nenhuma venda encontrada para o período.');
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao buscar histórico:', error);
+          alert('Erro ao consultar histórico.');
+        });
+    });
+  </script>
+</body>
+</html>

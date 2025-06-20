@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Quiosque</title>
+  <link rel="stylesheet" href="/css/style.css">
+
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main>
+    <div class="formulario">
+      <h2>Login do Quiosque</h2>
+      <form id="loginForm">
+        <input class="login" type="text" id="username" placeholder="Usuário" required />
+        <input class="login" type="password" id="senha" placeholder="Senha" required />
+        <button type="submit">Entrar</button>
+      </form>
+      <div id="mensagem"></div>
+    </div>
+  </main>
+  
+  <%- include('partials/footer') %>
+  <script>
+    const form = document.getElementById('loginForm');
+    const mensagem = document.getElementById('mensagem');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const senha = document.getElementById('senha').value.trim();
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, senha })
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+          window.location.href = '/dashboard'; 
+        } else {
+          mensagem.textContent = data.mensagem;
+        }
+      } catch (err) {
+        mensagem.textContent = 'Erro na conexão.';
+        console.error(err);
+      }
+    });
+  </script>
+
+</body>
+</html>

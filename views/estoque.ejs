@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Estoque por Quiosque</title>
+  <link rel="stylesheet" href="/css/style.css">
+
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <h1>Estoque - Quiosque: <span id="nomeQuiosque"></span></h1>
+
+  <input type="text" id="buscaSKU" placeholder="Buscar por SKU...">
+
+  <table id="tabelaEstoque" style="display: none;">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Quantidade</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <%- include('partials/footer') %>
+
+  <script>
+    async function carregarEstoque() {
+  const resposta = await fetch(`/api/estoque`);
+  const dados = await resposta.json();
+
+  console.log('Resposta da API:', dados);  // <-- Adiciona isso aqui
+
+  document.getElementById('nomeQuiosque').textContent = dados.quiosque;
+
+  const tbody = document.querySelector('#tabelaEstoque tbody');
+  tbody.innerHTML = '';
+
+  dados.skus.sort((a, b) => a.quantidade - b.quantidade);
+
+  if (dados.skus.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2">Nenhum item no estoque.</td></tr>';
+  } else {
+    dados.skus.forEach(({ sku, quantidade }) => {
+      const linha = document.createElement('tr');
+      linha.innerHTML = `<td>${sku}</td><td>${quantidade}</td>`;
+      tbody.appendChild(linha);
+    });
+  }
+
+  document.getElementById('tabelaEstoque').style.display = 'table';
+}
+
+    // Filtro de SKU
+    document.getElementById('buscaSKU').addEventListener('input', function () {
+      const filtro = this.value.toLowerCase();
+      const linhas = document.querySelectorAll('#tabelaEstoque tbody tr');
+
+      linhas.forEach(linha => {
+        const sku = linha.querySelector('td').textContent.toLowerCase();
+        linha.style.display = sku.includes(filtro) ? '' : 'none';
+      });
+    });
+
+    carregarEstoque();
+  </script>
+</body>
+</html>

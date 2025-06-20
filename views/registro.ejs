@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registro de Usuário</title>
+  <link rel="stylesheet" href="/css/style.css">
+
+</head>
+<body>
+  <%- include('partials/header') %>
+
+<main>
+  <div class="formulario">
+    <h2>Registrar Novo Usuário</h2>
+    <form id="registroForm">
+      <input type="text" id="username" placeholder="Usuário" required>
+      <input type="password" id="senha" placeholder="Senha" required>
+
+      <select id="quiosqueSelect" required>
+        <option value="">-- Selecione o Quiosque --</option>
+      </select>
+
+      <button type="submit">Registrar</button>
+    </form>
+  </div>
+  
+  <div id="mensagem"></div>
+</main>
+  <%- include('partials/footer') %>
+
+  <script>
+    const form = document.getElementById("registroForm");
+    const mensagem = document.getElementById("mensagem");
+    const quiosqueSelect = document.getElementById("quiosqueSelect");
+
+    async function carregarQuiosques() {
+      const res = await fetch("/quiosques");
+      const quiosques = await res.json();
+      quiosques.forEach(q => {
+        const opt = document.createElement("option");
+        opt.value = q.nome;
+        opt.textContent = q.nome;
+        quiosqueSelect.appendChild(opt);
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const senha = document.getElementById("senha").value;
+      const quiosque = document.getElementById("quiosqueSelect").value;
+
+      try {
+        const res = await fetch("/registro", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, senha, quiosque })
+        });
+
+        const data = await res.json();
+        mensagem.textContent = data.mensagem;
+        mensagem.style.color = data.status === "ok" ? "green" : "red";
+      } catch (err) {
+        mensagem.textContent = "Erro ao registrar.";
+        mensagem.style.color = "red";
+      }
+    });
+
+    window.onload = carregarQuiosques;
+  </script>
+</body>
+</html>

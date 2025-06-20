@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Estoque por Quiosque</title>
+  <style>
+    input[type="text"] {
+      margin: 20px auto;
+      padding: 8px;
+      width: 300px;
+      display: block;
+    }
+
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f4f4f4; }
+
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px 10px;
+      width: 100%;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 20px 0;
+    }
+    table{
+      width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="/logo.png" alt="" width="100px">
+  </header>
+
+  <h1>Estoque - Quiosque: <span id="nomeQuiosque"></span></h1>
+
+  <input type="text" id="buscaSKU" placeholder="Buscar por SKU...">
+
+  <table id="tabelaEstoque" style="display: none;">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Quantidade</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function carregarEstoque() {
+  const resposta = await fetch(`/api/estoque`);
+  const dados = await resposta.json();
+
+  console.log('Resposta da API:', dados);  // <-- Adiciona isso aqui
+
+  document.getElementById('nomeQuiosque').textContent = dados.quiosque;
+
+  const tbody = document.querySelector('#tabelaEstoque tbody');
+  tbody.innerHTML = '';
+
+  dados.skus.sort((a, b) => a.quantidade - b.quantidade);
+
+  if (dados.skus.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2">Nenhum item no estoque.</td></tr>';
+  } else {
+    dados.skus.forEach(({ sku, quantidade }) => {
+      const linha = document.createElement('tr');
+      linha.innerHTML = `<td>${sku}</td><td>${quantidade}</td>`;
+      tbody.appendChild(linha);
+    });
+  }
+
+  document.getElementById('tabelaEstoque').style.display = 'table';
+}
+
+    // Filtro de SKU
+    document.getElementById('buscaSKU').addEventListener('input', function () {
+      const filtro = this.value.toLowerCase();
+      const linhas = document.querySelectorAll('#tabelaEstoque tbody tr');
+
+      linhas.forEach(linha => {
+        const sku = linha.querySelector('td').textContent.toLowerCase();
+        linha.style.display = sku.includes(filtro) ? '' : 'none';
+      });
+    });
+
+    carregarEstoque();
+  </script>
+</body>
+</html>

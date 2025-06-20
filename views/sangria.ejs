@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Registrar Sangria</title>
+  <link rel="stylesheet" href="/css/style.css">
+
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <h2>Registrar Sangria</h2>
+
+  <form id="formSangria">
+    <label>Valor da sangria:</label>
+    <input type="number" step="0.01" name="valor" required>
+
+    <label>Motivo (opcional):</label>
+    <textarea name="motivo"></textarea>
+
+    <button type="submit">Registrar</button>
+  </form>
+
+  <div id="resultado"></div>
+
+  <div id="historicoCaixa"></div>
+
+  <%- include('partials/footer') %>
+<script>
+async function carregarHistorico() {
+  try {
+    const resUser = await fetch('/meu-quiosque', { credentials: 'same-origin' });
+    const dataUser = await resUser.json();
+
+    const resposta = await fetch(`/api/caixa/historico/${encodeURIComponent(dataUser.quiosque)}`);
+    const historico = await resposta.json();
+
+    const container = document.getElementById('historicoCaixa');
+    container.innerHTML = '<h3>Histórico do Caixa</h3>';
+
+    if (historico.length === 0) {
+      container.innerHTML += '<p>Nenhuma transação encontrada.</p>';
+      return;
+    }
+
+    historico.forEach(item => {
+      const tipo = item.forma_pagamento;
+      const valor = Number(item.valor).toFixed(2).replace('.', ',');
+      const data = item.data;
+
+      container.innerHTML += `<p><strong>${tipo}</strong>: R$ ${valor} - ${data}</p>`;
+    });
+
+  } catch (e) {
+    console.error('Erro ao carregar histórico:', e);
+    document.getElementById('historicoCaixa').innerText = 'Erro ao carregar histórico.';
+  }
+}
+
+  window.onload = carregarHistorico;
+
+    document.getElementById('formSangria').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const form = e.target;
+      const valor = parseFloat(form.valor.value);
+      const motivo = form.motivo.value;
+
+      // Busca o quiosque do usuário
+      const resUser = await fetch('/meu-quiosque', { credentials: 'same-origin' });
+      const dataUser = await resUser.json();
+
+      const resposta = await fetch('/api/sangria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quiosque: dataUser.quiosque,
+          valor,
+          motivo
+        })
+      });
+
+      if (resposta.ok) {
+        document.getElementById('resultado').innerText = 'Sangria registrada com sucesso!';
+        form.reset();
+      } else {
+        document.getElementById('resultado').innerText = 'Erro ao registrar sangria.';
+      }
+    });
+  </script>
+</body>
+</html>

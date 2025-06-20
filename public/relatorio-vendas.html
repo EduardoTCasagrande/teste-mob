@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h3>Gerar Relatório Excel</h3>
+<label>Data início:</label>
+<input type="date" id="inicio" />
+<label>Data fim:</label>
+<input type="date" id="fim" />
+<button onclick="baixarRelatorio()">Baixar Excel</button>
+
+<script>
+function baixarRelatorio() {
+  const inicio = document.getElementById('inicio').value;
+  const fim = document.getElementById('fim').value;
+  if (!inicio || !fim) {
+    alert('Selecione as datas.');
+    return;
+  }
+  window.open(`/relatorio-vendas?inicio=${inicio}&fim=${fim}`);
+}
+</script>
+
+</body>
+</html>

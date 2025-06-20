@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/style.css">
+  <title>Carregar Dados da Planilha</title>
+</head>
+<body>
+
+  <%- include('partials/header') %>
+  
+  <main id="ajustar-caixa" class="dashboard-container">
+    <div>
+      <div class="botao-container">
+        <a href="/reposicao">REPOSIÇÃO</a>
+        <a href="/vendas">VENDAS</a>
+        <a href="/estoque">ESTOQUE</a>
+        <a href="/sangria">SANGRIA</a>
+      </div>
+      <div id="caixaInfo"></div>
+    </div>
+
+
+  </main>
+
+
+  <%- include('partials/footer') %>
+
+<script>
+  
+async function carregarCaixa() {
+  try {
+    const resUser = await fetch('/meu-quiosque', { credentials: 'same-origin' });
+    if (!resUser.ok) {
+      window.location.href = '/login'; 
+      return;
+    }
+
+    const dataUser = await resUser.json();
+    console.log('Usuario:', dataUser);  // Só agora a variável existe
+
+    const resCaixa = await fetch(`/api/caixa/${encodeURIComponent(dataUser.quiosque)}`, { credentials: 'same-origin' });
+    const dataCaixa = await resCaixa.json();
+    console.log('Caixa:', dataCaixa);
+
+    const caixaInfo = document.getElementById('caixaInfo');
+    const totalNumero = Number(dataCaixa.total) || 0;
+
+    caixaInfo.innerHTML = `<strong>${dataUser.quiosque}</strong>: <strong>R$ ${totalNumero.toFixed(2).replace('.', ',')}</strong>`;
+  } catch (e) {
+    console.error('Erro ao carregar caixa:', e);
+    document.getElementById('caixaInfo').innerText = 'Erro ao carregar caixa.';
+  }
+}
+
+
+window.addEventListener('load', carregarCaixa);
+
+</script>
+
+</body>
+</html>

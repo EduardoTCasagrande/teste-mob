@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gerenciador de Relatórios</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 2rem auto; }
+    ul { list-style: none; padding-left: 0; }
+    li { margin-bottom: 0.5rem; }
+    button { margin-left: 1rem; }
+    pre { background: #eee; padding: 1rem; white-space: pre-wrap; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Gerenciador de Relatórios</h1>
+  <ul id="lista"></ul>
+  <pre id="conteudo"></pre>
+
+  <script>
+    const listaEl = document.getElementById('lista');
+    const conteudoEl = document.getElementById('conteudo');
+
+    async function carregarLista() {
+      const res = await fetch('/api/relatorios');
+      const arquivos = await res.json();
+
+      listaEl.innerHTML = '';
+      conteudoEl.textContent = '';
+
+      arquivos.forEach(nome => {
+        const li = document.createElement('li');
+        li.textContent = nome;
+
+        const btnLer = document.createElement('button');
+        btnLer.textContent = 'Ler';
+        btnLer.onclick = async () => {
+          const res = await fetch(`/api/relatorios/${nome}`);
+          const data = await res.json();
+          conteudoEl.textContent = data.conteudo || 'Nenhum conteúdo.';
+        };
+
+        const btnExcluir = document.createElement('button');
+        btnExcluir.textContent = 'Excluir';
+        btnExcluir.onclick = async () => {
+          if (confirm(`Excluir o arquivo ${nome}?`)) {
+            await fetch(`/api/relatorios/${nome}`, { method: 'DELETE' });
+            carregarLista();
+          }
+        };
+
+        const btnBaixar = document.createElement('a');
+        btnBaixar.textContent = 'Baixar';
+        btnBaixar.href = `/api/relatorios/${nome}?raw=true`;
+        btnBaixar.download = nome;
+        btnBaixar.style.marginLeft = '1rem';
+        btnBaixar.style.textDecoration = 'none';
+
+        li.appendChild(btnLer);
+        li.appendChild(btnExcluir);
+        li.appendChild(btnBaixar);
+        listaEl.appendChild(li);
+      });
+    }
+
+    carregarLista();
+  </script>
+</body>
+</html>
